@@ -1,0 +1,7 @@
+PLACEHOLDER — replace this file with a real GeoTIFF.
+Expected format : Single-band GeoTIFF
+CRS             : WGS84 (EPSG:4326) or projected (auto-reprojected by georaster)
+Coverage        : Douala and Yaoundé, Cameroon
+Pixel values    : Population per km²  (integer or float32)
+No-data value   : 0 or -9999
+Suggested source: WorldPop (https://www.worldpop.org) — CMR 100 m grid

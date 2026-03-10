@@ -1,0 +1,10 @@
+PLACEHOLDER — replace this file with a real GeoTIFF.
+Expected format : Single-band GeoTIFF
+CRS             : WGS84 (EPSG:4326) or projected
+Coverage        : Douala and Yaoundé, Cameroon
+Pixel values    : ESA WorldCover class codes (see palette in layers.js)
+                  10=Tree cover, 20=Shrubland, 30=Grassland, 40=Cropland,
+                  50=Built-up, 60=Bare/sparse veg, 70=Snow/Ice,
+                  80=Permanent water, 90=Herbaceous wetland, 95=Mangroves, 100=Moss
+No-data value   : 0 or 255
+Suggested source: ESA WorldCover 10m (https://esa-worldcover.org) — 2021 CMR tile

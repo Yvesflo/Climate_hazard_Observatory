@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Demo Environmental Hazard Observatory</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ── LOADER ─────────────────────────────────────────────── -->
+<div id="loader">
+  <div class="loader-inner">
+    <div class="spin"></div>
+    <div class="loader-logo">EHO</div>
+  </div>
+  <p id="loader-msg">Initializing observatory…</p>
+  <div id="loader-sub">Demo Environmental Hazard Observatory</div>
+  <div id="api-status"></div>
+</div>
+
+<!-- ── HEADER ─────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">EHO</div>
+    <div>
+      <h1>Demo Environmental Hazard Observatory</h1>
+      <span>Douala &amp; Yaoundé &nbsp;·&nbsp; AirQo &nbsp;·&nbsp; OpenWeatherMap &nbsp;·&nbsp; <em class="author">By Yves Wasnyo MD, PhDc</em></span>
+    </div>
+  </div>
+  <div class="hdr-r">
+    <div class="badge badge-aq" id="badge-aq">⬤ AirQo DEMO</div>
+    <div class="badge badge-wx" id="badge-wx">⬤ OWM DEMO</div>
+    <button class="hdr-btn" id="btn-refresh" onclick="App.manualRefresh()" title="Refresh data now">⟳ Refresh</button>
+    <button class="hdr-btn" onclick="App.openAbout()" title="About this app">ℹ About</button>
+    <div id="clk">--:--:-- UTC</div>
+  </div>
+</header>
+
+<!-- ── MAIN ───────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <div class="sbs">
+      <h3>
+        <span>🏙 City Focus</span>
+        <span class="sbs-hint">Pan &amp; zoom to city</span>
+      </h3>
+      <div class="city-btns">
+        <button class="city-btn active" onclick="App.filterCity('all',this)" title="Show both cities">🌍 All</button>
+        <button class="city-btn" onclick="App.filterCity('Douala',this)" title="Zoom to Douala">Douala</button>
+        <button class="city-btn" onclick="App.filterCity('Yaoundé',this)" title="Zoom to Yaoundé">Yaoundé</button>
+      </div>
+    </div>
+
+    <div class="sbs">
+      <h3><span>🎯 Hazard Layer</span></h3>
+      <div class="htabs" id="htabs">
+        <button class="htab active" data-h="aqi"       onclick="App.setHazard('aqi',this)"       title="Air Quality Index — PM2.5 µg/m³">🌫️ AQI</button>
+        <button class="htab"        data-h="temp"      onclick="App.setHazard('temp',this)"      title="Heat index — Temperature &amp; feels-like">🌡️ Heat</button>
+        <button class="htab"        data-h="uv"        onclick="App.setHazard('uv',this)"        title="UV Index — solar radiation intensity">☀️ UV</button>
+        <button class="htab"        data-h="wind"      onclick="App.setHazard('wind',this)"      title="Surface wind speed km/h">💨 Wind</button>
+        <button class="htab"        data-h="rain"      onclick="App.setHazard('rain',this)"      title="Hourly precipitation mm">🌧️ Rain</button>
+        <button class="htab"        data-h="humid"     onclick="App.setHazard('humid',this)"     title="Relative humidity %">💧 Humid</button>
+        <button class="htab"        data-h="composite" onclick="App.setHazard('composite',this)" title="Composite environmental risk score 0–100">⚠️ Risk</button>
+      </div>
+      <div id="hazard-desc" class="hint-text">Air Quality Index — PM2.5 µg/m³</div>
+    </div>
+
+    <div class="sbs">
+      <h3><span>🌤 Current Weather</span> <span class="wx-city-tag" id="wx-city-lbl">Douala</span></h3>
+      <div class="wx-strip">
+        <div class="wx-card" title="Air temperature">
+          <div class="wx-icon">🌡️</div>
+          <div class="wx-val" id="wx-temp">—</div>
+          <div class="wx-lbl">Temp °C</div>
+        </div>
+        <div class="wx-card" title="Feels-like (heat index)">
+          <div class="wx-icon">🥵</div>
+          <div class="wx-val" id="wx-feel">—</div>
+          <div class="wx-lbl">Feels Like</div>
+        </div>
+        <div class="wx-card" title="UV index &amp; category">
+          <div class="wx-icon">☀️</div>
+          <div class="wx-val" id="wx-uv">—</div>
+          <div class="wx-lbl">UV Index</div>
+        </div>
+        <div class="wx-card" title="Relative humidity">
+          <div class="wx-icon">💧</div>
+          <div class="wx-val" id="wx-hum">—</div>
+          <div class="wx-lbl">Humidity</div>
+        </div>
+        <div class="wx-card" title="Surface wind speed">
+          <div class="wx-icon">💨</div>
+          <div class="wx-val" id="wx-wind">—</div>
+          <div class="wx-lbl">Wind km/h</div>
+        </div>
+        <div class="wx-card" title="Hourly rain accumulation">
+          <div class="wx-icon">🌧️</div>
+          <div class="wx-val" id="wx-rain">—</div>
+          <div class="wx-lbl">Rain mm</div>
+        </div>
+        <div class="wx-card" title="Atmospheric pressure">
+          <div class="wx-icon">🧭</div>
+          <div class="wx-val" id="wx-pres">—</div>
+          <div class="wx-lbl">hPa</div>
+        </div>
+        <div class="wx-card wx-desc-card" title="Weather condition">
+          <div class="wx-icon" id="wx-icon">🌤</div>
+          <div class="wx-desc" id="wx-desc">—</div>
+        </div>
+        <div class="wx-card" title="Calculated heat index (Steadman formula)">
+          <div class="wx-icon">🔥</div>
+          <div class="wx-val" id="wx-hi">—</div>
+          <div class="wx-lbl">Heat Idx</div>
+        </div>
+      </div>
+      <div id="wx-alerts" style="display:none"></div>
+    </div>
+
+    <div class="sbs">
+      <h3>📊 Network Stats</h3>
+      <div class="stats-grid">
+        <div class="sc" title="Total active monitoring sites">
+          <div class="sc-v" id="st-sites">—</div>
+          <div class="sc-l">Active Sites</div>
+        </div>
+        <div class="sc" title="Area-average PM2.5 µg/m³">
+          <div class="sc-v" id="st-avg">—</div>
+          <div class="sc-l">Avg PM2.5</div>
+        </div>
+        <div class="sc" title="Sites with PM2.5 &gt; 55 µg/m³ (Unhealthy)">
+          <div class="sc-v sc-warn" id="st-hot">—</div>
+          <div class="sc-l">⚠ Hotspots</div>
+        </div>
+        <div class="sc" title="Sites with composite risk score &gt; 60">
+          <div class="sc-v sc-danger" id="st-risk">—</div>
+          <div class="sc-l">🔴 High Risk</div>
+        </div>
+      </div>
+      <div id="last-updated" class="hint-text" style="margin-top:6px;">Last updated: —</div>
+    </div>
+
+    <div class="sbs">
+      <h3>Basemap</h3>
+      <div class="ibtns">
+        <button class="ibtn active" id="bm-dark"      onclick="App.setBasemap('dark',this)">🌑 Dark</button>
+        <button class="ibtn"        id="bm-osm"       onclick="App.setBasemap('osm',this)">🗺 OSM</button>
+        <button class="ibtn"        id="bm-satellite" onclick="App.setBasemap('satellite',this)">🛰 Sat</button>
+      </div>
+    </div>
+
+    <div class="sbs">
+      <h3>Interpolation</h3>
+      <div class="ibtns">
+        <button class="ibtn"        id="btn-idw"     onclick="App.setInterp('idw')">IDW</button>
+        <button class="ibtn"        id="btn-kriging"  onclick="App.setInterp('kriging')">Kriging</button>
+        <button class="ibtn active" id="btn-none"     onclick="App.setInterp('none')">Off</button>
+      </div>
+    </div>
+
+    <div class="sbs">
+      <h3>Overlay Layers</h3>
+      <div class="lr"><label>🔵 3km Coverage</label>  <label class="sw"><input type="checkbox" onchange="App.toggleLayer('cov',this.checked)"><span class="sw-s"></span></label></div>
+      <div class="lr"><label>➕ Sensor Gaps</label>   <label class="sw"><input type="checkbox" onchange="App.toggleLayer('gap',this.checked)"><span class="sw-s"></span></label></div>
+      <div class="lr"><label>💨 Wind Arrows</label>   <label class="sw"><input type="checkbox" onchange="App.toggleLayer('wind',this.checked)"><span class="sw-s"></span></label></div>
+    </div>
+
+    <div class="sbs">
+      <h3>🗂 Context Layers</h3>
+
+      <div class="cl-group">Rasters</div>
+      <div class="cl-row">
+        <label>👥 Population Density</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-popdens"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('popdens',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+      <div class="cl-row">
+        <label>🌿 Land Cover</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-landcover"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('landcover',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+
+      <div class="cl-group">Infrastructure</div>
+      <div class="cl-row">
+        <label>🛣️ Roads</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-roads"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('roads',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+      <div class="cl-row">
+        <label>🚂 Railways</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-railways"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('railways',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+      <div class="cl-row">
+        <label>🏘️ Buildings</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-buildings"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('buildings',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+
+      <div class="cl-group">Water</div>
+      <div class="cl-row">
+        <label>🌊 Rivers</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-rivers"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('rivers',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+      <div class="cl-row">
+        <label>💧 Lakes &amp; Wetlands</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-lakes"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('lakes',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+
+      <div class="cl-group">Places</div>
+      <div class="cl-row">
+        <label>📌 Localities</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-localities"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('localities',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+      <div class="cl-row">
+        <label>⛪ Worship</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-worship"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('worship',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+      <div class="cl-row">
+        <label>⭐ POIs</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-pois"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('pois',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+      <div class="cl-row">
+        <label>🚌 Public Transport</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-transport"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('transport',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+      <div class="cl-row">
+        <label>⛽ Traffic Facilities</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-traffic"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('traffic',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+
+      <div class="cl-group">Admin Boundaries</div>
+      <div class="cl-row">
+        <label>🏙️ Divisions</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-divisions"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('divisions',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+      <div class="cl-row">
+        <label>🗺️ Subdivisions</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-subdivision"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('subdivision',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+
+      <div class="cl-group">Health</div>
+      <div class="cl-row">
+        <label>🏥 Health Districts</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-health_district"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('health_district',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+      <div class="cl-row">
+        <label>🩺 Health Areas</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-health_area"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('health_area',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+      <div class="cl-row">
+        <label>🏨 Hospitals</label>
+        <div class="cl-right"><span class="cl-badge" id="cl-hospitals"></span>
+          <label class="sw"><input type="checkbox" onchange="ContextLayers.toggle('hospitals',this.checked)"><span class="sw-s"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="sbs" style="padding-bottom:3px;">
+      <h3>📍 Monitoring Sites <span class="site-count" id="site-count"></span></h3>
+      <div class="zone-nav">
+        <div class="zone-cats">
+          <button class="zone-cat active" onclick="App.setZoneCat('admin',this)">🏙 Admin</button>
+          <button class="zone-cat" onclick="App.setZoneCat('health',this)">🏥 Health</button>
+        </div>
+        <select id="zone-layer" class="zone-layer" onchange="App.setZoneLayer(this.value)">
+          <option value="divisions">Divisions (NAME_2)</option>
+          <option value="subdivision">Subdivisions (NAME_3)</option>
+        </select>
+        <input id="zone-search" class="site-search" type="search"
+               placeholder="Type zone name to zoom…"
+               oninput="App.searchZone(this.value)"
+               list="zone-suggestions" autocomplete="off"/>
+        <datalist id="zone-suggestions"></datalist>
+        <div id="zone-result" class="zone-result"></div>
+      </div>
+    </div>
+    <div class="site-list" id="site-list"></div>
+
+  </div><!-- /sidebar -->
+
+  <!-- MAP -->
+  <div style="flex:1;position:relative;">
+    <div id="map"></div>
+    <div class="map-legend" id="map-legend">
+      <div class="ml-title" id="ml-title">Legend</div>
+    </div>
+    <div class="map-coords" id="map-coords">Hover map for coordinates</div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- CORRELATION PANEL -->
+<div id="corr-panel">
+  <div class="cp-header">
+    <div class="cp-title">
+      <span id="cp-icon">⚡</span>
+      <h3 id="cp-title-text">Hazard Correlation &amp; Trends</h3>
+    </div>
+    <div class="cp-tabs">
+      <button class="cp-tab active" onclick="App.setCorrView('trend',this)"   title="24-hour multi-variable trend">📈 24h Trend</button>
+      <button class="cp-tab"        onclick="App.setCorrView('scatter',this)" title="AQI vs Temperature scatter plot">🔵 AQI vs Temp</button>
+      <button class="cp-tab"        onclick="App.setCorrView('radar',this)"   title="Hexagonal risk radar chart">🕸 Risk Radar</button>
+    </div>
+    <button class="cp-toggle" onclick="App.togglePanel()" id="cp-toggle" title="Collapse/expand panel">▼</button>
+  </div>
+  <div class="cp-body" id="cp-body">
+    <canvas id="corr-canvas"></canvas>
+  </div>
+</div>
+
+<!-- ── ABOUT MODAL ───────────────────────────────────────── -->
+<div id="about-modal" class="modal-backdrop" style="display:none" onclick="App.closeAbout(event)">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-label="About">
+    <button class="modal-close" onclick="App.closeAbout()" title="Close">&times;</button>
+    <div class="modal-logo">EHO</div>
+    <h2 class="modal-title">Demo Environmental Hazard Observatory</h2>
+    <p class="modal-author">By <strong>Yves Wasnyo</strong> MD, PhDc</p>
+    <hr class="modal-hr"/>
+    <p class="modal-desc">
+      A real-time environmental health monitoring platform for urban Cameroon.
+      Integrates AirQo sensor networks and OpenWeatherMap One Call 3.0 to display
+      air quality, meteorological hazards, and composite risk scores across
+      Douala and Yaoundé.
+    </p>
+    <div class="modal-feature-grid">
+      <div class="mf"><span>🌫️</span><span>PM2.5 / AQI</span></div>
+      <div class="mf"><span>🌡️</span><span>Heat Index</span></div>
+      <div class="mf"><span>☀️</span><span>UV Index</span></div>
+      <div class="mf"><span>💨</span><span>Wind &amp; Rain</span></div>
+      <div class="mf"><span>⚠️</span><span>Composite Risk</span></div>
+      <div class="mf"><span>📐</span><span>IDW / Kriging</span></div>
+      <div class="mf"><span>🛰</span><span>3 Basemaps</span></div>
+      <div class="mf"><span>📈</span><span>48h Forecast</span></div>
+    </div>
+    <hr class="modal-hr"/>
+    <p class="modal-foot">Data sources: <a href="https://airqo.net" target="_blank">AirQo</a> &nbsp;·&nbsp;
+      <a href="https://openweathermap.org" target="_blank">OpenWeatherMap</a></p>
+  </div>
+</div>
+
+<!-- ── SCRIPTS (order matters!) ───────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+<script src="https://unpkg.com/georaster@latest/dist/georaster.browser.bundle.min.js"></script>
+<script src="https://unpkg.com/georaster-layer-for-leaflet@latest/dist/georaster-layer-for-leaflet.min.js"></script>
+
+<script src="config.js"></script>          <!-- 🔑 tokens -->
+<script src="data/demo_sites.js"></script>  <!-- fallback data -->
+<script src="airqo.js"></script>
+<script src="weather.js"></script>
+<script src="interpolation.js"></script>
+<script src="layers.js"></script>
+<script src="map.js"></script>
+<script src="chart.js"></script>
+
+<script>
+  // ── Bootstrap ─────────────────────────────────────────────
+  document.addEventListener("DOMContentLoaded", () => App.init());
+</script>
+
+</body>
+</html>
