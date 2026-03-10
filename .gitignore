@@ -1,6 +1,9 @@
 # ── API keys — NEVER commit this file ────────────────────────
 config.js
 
+# ── Large files (> 100 MB — exceeds GitHub limit) ────────────
+data/buildings.geojson
+
 # ── Node / build ─────────────────────────────────────────────
 node_modules/
 npm-debug.log*
