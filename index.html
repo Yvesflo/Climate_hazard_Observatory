@@ -385,7 +385,27 @@
 <script src="https://unpkg.com/georaster@latest/dist/georaster.browser.bundle.min.js"></script>
 <script src="https://unpkg.com/georaster-layer-for-leaflet@latest/dist/georaster-layer-for-leaflet.min.js"></script>
 
-<script src="config.js"></script>          <!-- 🔑 tokens -->
+<script>
+  // Fallback CONFIG for environments where config.js is not present (e.g. GitHub Pages).
+  // config.js (if it exists) will override this block with real tokens.
+  window.CONFIG = {
+    AIRQO_TOKEN: "YOUR_AIRQO_TOKEN_HERE",
+    OWM_TOKEN:   "YOUR_OPENWEATHERMAP_TOKEN_HERE",
+    COVERAGE_RADIUS_KM:  3,
+    INTERP_GRID_SIZE:    40,
+    REFRESH_INTERVAL_MS: 300000,
+    CITIES: {
+      Douala:  { lat: 4.0511, lng: 9.7085 },
+      Yaoundé: { lat: 3.8667, lng: 11.5167 },
+    },
+    OWM_ONE_CALL: "https://api.openweathermap.org/data/3.0/onecall",
+    OWM_AIR_BASE: "https://api.openweathermap.org/data/2.5/air_pollution",
+    AIRQO_BASE:   "https://platform.airqo.net/api/v2",
+  };
+  CONFIG.USE_AIRQO = false;
+  CONFIG.USE_OWM   = false;
+</script>
+<script src="config.js"></script>          <!-- 🔑 real tokens (local only, overrides fallback) -->
 <script src="data/demo_sites.js"></script>  <!-- fallback data -->
 <script src="airqo.js"></script>
 <script src="weather.js"></script>
