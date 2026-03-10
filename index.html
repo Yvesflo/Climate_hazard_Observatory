@@ -35,6 +35,7 @@
     </div>
   </div>
   <div class="hdr-r">
+    <button class="hdr-btn sb-toggle" onclick="toggleSidebar()" title="Open/close menu">☰</button>
     <div class="badge badge-aq" id="badge-aq">⬤ AirQo DEMO</div>
     <div class="badge badge-wx" id="badge-wx">⬤ OWM DEMO</div>
     <button class="hdr-btn" id="btn-refresh" onclick="App.manualRefresh()" title="Refresh data now">⟳ Refresh</button>
@@ -44,6 +45,9 @@
 </header>
 
 <!-- ── MAIN ───────────────────────────────────────────────── -->
+<!-- ── Mobile sidebar backdrop ──────────────────────────── -->
+<div id="sb-overlay" onclick="toggleSidebar()"></div>
+
 <div class="main">
 
   <!-- SIDEBAR -->
@@ -300,8 +304,8 @@
           <button class="zone-cat" onclick="App.setZoneCat('health',this)">🏥 Health</button>
         </div>
         <select id="zone-layer" class="zone-layer" onchange="App.setZoneLayer(this.value)">
-          <option value="divisions">Divisions (NAME_2)</option>
-          <option value="subdivision">Subdivisions (NAME_3)</option>
+          <option value="divisions">Divisions </option>
+          <option value="subdivision">Subdivisions </option>
         </select>
         <input id="zone-search" class="site-search" type="search"
                placeholder="Type zone name to zoom…"
@@ -391,6 +395,11 @@
 <script src="chart.js"></script>
 
 <script>
+  // ── Sidebar toggle (mobile) ──────────────────────────────
+  function toggleSidebar() {
+    document.body.classList.toggle('sb-open');
+  }
+
   // ── Bootstrap ─────────────────────────────────────────────
   document.addEventListener("DOMContentLoaded", () => App.init());
 </script>
