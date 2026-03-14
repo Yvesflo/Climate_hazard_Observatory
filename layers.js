@@ -68,12 +68,6 @@ const ContextLayers = (() => {
       extraProp: "fclass",
       style: () => ({ color: "#886644", weight: 2, opacity: 0.8, dashArray: "6 3" }),
     },
-    buildings: {
-      label: "Buildings", emoji: "🏘️", group: "infra",
-      file: "data/buildings.geojson", type: "polygon",
-      style: () => ({ color: "#7aaabb", weight: 0.5, fillColor: "#1a3a58", fillOpacity: 0.4 }),
-    },
-
     // ▸ Water ────────────────────────────────────────────────
     rivers: {
       label: "Rivers", emoji: "🌊", group: "nature",
@@ -104,13 +98,8 @@ const ContextLayers = (() => {
       extraProp: "fclass",
     },
     transport: {
-      label: "Public Transport",   emoji: "🚌", group: "places",
+      label: "Public Transport Hub", emoji: "🚌", group: "places",
       file: "data/transport.geojson",  type: "point", color: "#44ddff",
-      extraProp: "fclass",
-    },
-    traffic: {
-      label: "Traffic Facilities", emoji: "⛽", group: "places",
-      file: "data/traffic.geojson",    type: "point", color: "#ff9944",
       extraProp: "fclass",
     },
 
@@ -137,11 +126,7 @@ const ContextLayers = (() => {
       file: "data/health_area.geojson", type: "polygon", nameProp: "Nom_AS",
       style: () => ({ color: "#f06292", weight: 1, opacity: 0.8, fillColor: "#f06292", fillOpacity: 0.05 }),
     },
-    hospitals: {
-      label: "Hospitals", emoji: "🏨", group: "health",
-      file: "data/hospitals.geojson", type: "point", color: "#ff1744", nameProp: "Aire",
-      extraProp: "cat",
-    },
+
   };
 
   // ── Runtime state ───────────────────────────────────────────

@@ -461,7 +461,7 @@ const App = (() => {
     Charts.draw(v, activeSites(), state.weather, state.cityFilter);
   }
 
-  let _panelOpen = true;
+  let _panelOpen = false;
 
   function togglePanel() {
     _panelOpen = !_panelOpen;
@@ -521,6 +521,13 @@ const App = (() => {
 
     render();
     document.getElementById("loader").style.display = "none";
+    // Start panel collapsed
+    const cpBody   = document.getElementById("cp-body");
+    const cpToggle = document.getElementById("cp-toggle");
+    const cpPanel  = document.getElementById("corr-panel");
+    cpBody.style.display  = "none";
+    cpPanel.style.height  = "36px";
+    cpToggle.textContent  = "▲";
     setTimeout(() => Charts.draw(state.corrView, activeSites(), state.weather, state.cityFilter), 200);
 
     // Clock
