@@ -69,19 +69,24 @@ const ContextLayers = (() => {
       label: "Land Cover", emoji: "🌿", group: "raster",
       file: "data/landcover.tif", type: "raster",
       colorFn(v, info) {
-        if (v == null || Number.isNaN(v) || v === 0 || v === info.noDataValue || v < 0) return null;
+        if (v == null || Number.isNaN(v) || v === info.noDataValue) return null;
+        // Round to nearest integer — critical for resampled classified rasters
+        // (bilinear interpolation in QGIS turns class 50 into e.g. 49.73)
+        const cls = Math.round(v);
+        if (cls <= 0) return null;
         // CGLS-LC100 closed forest (111–116) and open forest (121–126)
-        if (v >= 111 && v <= 116) return "rgba(34,139,34,.80)";
-        if (v >= 121 && v <= 126) return "rgba(100,178,60,.75)";
-        return LC_PALETTE[v] || LC_PALETTE[Math.round(v / 10) * 10] || null;
+        if (cls >= 111 && cls <= 116) return "rgba(34,139,34,.82)";
+        if (cls >= 121 && cls <= 126) return "rgba(100,178,60,.78)";
+        // Direct lookup by class code
+        return LC_PALETTE[cls] || null;
       },
       legend: [
         { color: "rgba(120,120,150,.80)",  label: "Built-up" },
         { color: "rgba(255,250,140,.72)",  label: "Cropland" },
         { color: "rgba(168,210,80,.70)",   label: "Herbaceous veg." },
         { color: "rgba(200,160,100,.72)",  label: "Shrubs" },
-        { color: "rgba(34,139,34,.80)",    label: "Closed forest" },
-        { color: "rgba(100,178,60,.75)",   label: "Open forest" },
+        { color: "rgba(34,139,34,.82)",    label: "Closed forest" },
+        { color: "rgba(100,178,60,.78)",   label: "Open forest" },
         { color: "rgba(30,144,255,.60)",   label: "Water bodies" },
         { color: "rgba(0,55,180,.55)",     label: "Ocean / Sea" },
       ],
