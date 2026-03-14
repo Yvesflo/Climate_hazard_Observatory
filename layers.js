@@ -277,6 +277,9 @@ const ContextLayers = (() => {
       max:   (Number.isFinite(rawMax) && rawMax !== nd) ? rawMax : 1,
     };
     info.range = info.max - info.min;
+    // Store actual data range in runtime state so the legend can display real numbers
+    _st[key].dataMin = info.min;
+    _st[key].dataMax = info.max;
     // Diagnostic: sample a few pixel values to help verify correct dataset
     const sampleVals = (raster.values[0] || []).flat().filter(x => x != null && x !== nd).slice(0, 8);
     console.info(`[ContextLayers] “${key}” — noData:${nd}, min:${info.min.toFixed(1)}, max:${info.max.toFixed(1)}, sample values:`, sampleVals);
@@ -379,8 +382,12 @@ const ContextLayers = (() => {
       if (def.gradientLegend) {
         const g    = def.gradientLegend;
         const grad = g.stops.join(", ");
+        // Use actual raster min/max if available, otherwise fall back to label strings
+        const st   = _st[k];
+        const minLabel = (st.dataMin != null) ? Math.round(st.dataMin).toLocaleString() : g.min;
+        const maxLabel = (st.dataMax != null) ? Math.round(st.dataMax).toLocaleString() : g.max;
         html += `<div class="ml-grad" style="background:linear-gradient(to right,${grad})"></div>`;
-        html += `<div class="ml-grad-labels"><span>${g.min}</span><span>${g.max}</span></div>`;
+        html += `<div class="ml-grad-labels"><span>${minLabel}</span><span>${maxLabel}</span></div>`;
         html += `<div class="ml-grad-unit">${g.unit}</div>`;
       } else if (def.legend) {
         html += def.legend
