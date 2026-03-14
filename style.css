@@ -352,6 +352,7 @@ input:checked + .sw-s::before    { transform: translateX(15px); }
 .ml-title  { font-size: 9px; font-weight: 700; color: #3d7a9a; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px; }
 .ml-row    { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
 .ml-dot    { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.ml-sep    { border-top: 1px solid #1a3044; margin: 6px 0; }
 
 /* coordinates strip */
 .map-coords {

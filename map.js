@@ -344,18 +344,15 @@ const App = (() => {
     composite: [["#00e400","Low"],["#ffcc00","Moderate"],["#ff7700","High"],["#ff1111","Critical"]],
   };
   function updateLegend() {
-    const lg = document.getElementById("map-legend");
     const titles = {
       aqi:"AQI (PM2.5 µg/m³)", temp:"Temperature °C", uv:"UV Index",
       wind:"Wind km/h", rain:"Rain mm/h", humid:"Humidity %", composite:"Risk Score"
     };
-    const title = document.getElementById("ml-title");
-    if (title) title.textContent = titles[state.hazardMode] || "Legend";
     const rows = (LEGEND_STOPS[state.hazardMode]||[])
       .map(([c,l])=>`<div class="ml-row"><div class="ml-dot" style="background:${c}"></div><span>${l}</span></div>`)
       .join("");
-    // Replace everything after the title
-    lg.innerHTML = `<div class="ml-title">${titles[state.hazardMode]||"Legend"}</div>${rows}`;
+    const hazardEl = document.getElementById("ml-hazard");
+    if (hazardEl) hazardEl.innerHTML = `<div class="ml-title">${titles[state.hazardMode]||"Legend"}</div>${rows}`;
   }
   // ── Zone Navigator ─────────────────────────────────────────
   function setZoneCat(cat, btn) {

@@ -46,6 +46,13 @@ const ContextLayers = (() => {
         const g = Math.round(60  * (1 - t));
         return `rgba(${r},${g},10,0.65)`;
       },
+      legend: [
+        { color: "rgba(0,60,10,.65)",    label: "Very Low" },
+        { color: "rgba(64,45,10,.65)",   label: "Low" },
+        { color: "rgba(128,30,10,.65)",  label: "Moderate" },
+        { color: "rgba(191,15,10,.65)",  label: "High" },
+        { color: "rgba(255,0,10,.65)",   label: "Very High" },
+      ],
     },
     landcover: {
       label: "Land Cover", emoji: "🌿", group: "raster",
@@ -53,6 +60,15 @@ const ContextLayers = (() => {
       colorFn(v) {
         return LC_PALETTE[v] || LC_PALETTE[Math.round(v / 10) * 10] || "rgba(100,100,100,.2)";
       },
+      legend: [
+        { color: "rgba(0,160,0,.65)",     label: "Tree Cover" },
+        { color: "rgba(80,200,80,.60)",   label: "Shrubland" },
+        { color: "rgba(210,200,120,.60)", label: "Grassland" },
+        { color: "rgba(255,210,90,.60)",  label: "Cropland" },
+        { color: "rgba(190,185,175,.65)", label: "Built-up" },
+        { color: "rgba(0,110,255,.45)",   label: "Water" },
+        { color: "rgba(0,195,170,.50)",   label: "Wetland" },
+      ],
     },
 
     // ▸ Infrastructure ───────────────────────────────────────
@@ -187,7 +203,13 @@ const ContextLayers = (() => {
     }
     const res    = await fetch(def.file);
     if (!res.ok) throw new Error(`HTTP ${res.status} for ${def.file}`);
-    const raster = await parseGeoraster(await res.arrayBuffer());
+    const buffer = await res.arrayBuffer();
+    if (!buffer.byteLength) {
+      console.warn(`[ContextLayers] "${key}" — placeholder file is empty. Replace with a real GeoTIFF.`);
+      _st[key].empty = true;
+      return L.layerGroup();
+    }
+    const raster = await parseGeoraster(buffer);
     const info   = {
       noDataValue: raster.noDataValue,
       min:   raster.mins[0],
@@ -230,6 +252,7 @@ const ContextLayers = (() => {
     if (!on) {
       if (st.layer) _map.removeLayer(st.layer);
       _updateBadge(key);
+      if (def.type === "raster") _updateRasterLegend();
       return;
     }
 
@@ -255,6 +278,7 @@ const ContextLayers = (() => {
       if (def.type === "raster") st.layer.bringToBack?.();
     }
     _updateBadge(key);
+    if (def.type === "raster") _updateRasterLegend();
   }
 
   function _updateBadge(key) {
@@ -275,6 +299,27 @@ const ContextLayers = (() => {
     el.textContent = text;
     el.className   = cls;
     el.title       = title;
+  }
+
+  // ── Raster legend in the map legend panel ──────────────────
+  function _updateRasterLegend() {
+    const el = document.getElementById("ml-raster");
+    if (!el) return;
+    const active = Object.keys(DEFS).filter(
+      k => DEFS[k].type === "raster" && _st[k]?.active && !_st[k]?.empty
+    );
+    if (!active.length) { el.innerHTML = ""; return; }
+    let html = "";
+    active.forEach(k => {
+      const def = DEFS[k];
+      if (!def.legend) return;
+      html += `<div class="ml-sep"></div><div class="ml-title">${def.emoji} ${def.label}</div>`;
+      html += def.legend
+        .map(({color, label}) =>
+          `<div class="ml-row"><div class="ml-dot" style="background:${color}"></div><span>${label}</span></div>`
+        ).join("");
+    });
+    el.innerHTML = html;
   }
 
   // ── Pre-fetch a layer's data for searching (without adding to map) ──

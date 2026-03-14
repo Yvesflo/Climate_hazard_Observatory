@@ -16,3 +16,6 @@ desktop.ini
 # ── Editor ───────────────────────────────────────────────────
 .vscode/
 *.swp
+
+# QGIS raster statistics sidecars
+*.tif.aux.xml
