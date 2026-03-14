@@ -17,78 +17,108 @@ const ContextLayers = (() => {
     return { color: "#444444", weight: 0.8, opacity: 0.6 };
   }
 
-  // ── Land cover palette — CGLS-LC100 (20–200) + ESA WorldCover (10–100) ──
-  // Using standard cartographic colors: blue-grey cities, greens for veg, blue for water
-  const LC_PALETTE = {
-    10:  "rgba(34,139,34,.75)",    // Tree cover (ESA WC)
-    20:  "rgba(200,160,100,.72)",  // Shrubs
-    30:  "rgba(168,210,80,.70)",   // Herbaceous veg. / Grassland
-    40:  "rgba(255,250,140,.72)",  // Cropland
-    50:  "rgba(120,120,150,.80)",  // Built-up — blue-grey (urban cartographic)
-    60:  "rgba(205,190,155,.60)",  // Bare / sparse vegetation
-    70:  "rgba(235,250,255,.60)",  // Snow / Ice
-    80:  "rgba(30,144,255,.60)",   // Permanent water
-    90:  "rgba(0,200,160,.60)",    // Herbaceous wetland
-    95:  "rgba(0,150,110,.60)",    // Mangroves
-    100: "rgba(180,210,170,.55)",  // Moss / lichen
-    200: "rgba(0,55,180,.55)",     // Ocean / Sea (CGLS-LC100)
+  // ══════════════════════════════════════════════════════════
+  //  RASTER 1 — Population Density (WorldPop, people/km²)
+  //  Type: CONTINUOUS — uses a smooth colour ramp (YlOrRd).
+  //  Each pixel value is a real number; colour interpolated.
+  // ══════════════════════════════════════════════════════════
+
+  // ══════════════════════════════════════════════════════════
+  //  RASTER 2 — Land Cover (Copernicus CGLS-LC100 v3, 100m)
+  //  Type: DISCRETE / CATEGORICAL — each integer class code
+  //  gets its own fixed colour from the official Copernicus
+  //  colour table. No gradients, no interpolation.
+  //  Class codes: 20 Shrubs · 30 Herb. · 40 Cropland ·
+  //  50 Built-up · 60 Bare · 80 Water · 90 Wetland ·
+  //  95 Mangroves · 100 Moss · 111-116 Closed forest ·
+  //  121-126 Open forest · 200 Ocean
+  // ══════════════════════════════════════════════════════════
+  // Official Copernicus CGLS-LC100 colour table (RGB hex)
+  const CGLS_COLORS = {
+    20:  "#ffbb22",  // Shrubs
+    30:  "#ffff4c",  // Herbaceous vegetation
+    40:  "#f096ff",  // Cropland
+    50:  "#fa0000",  // Built-up
+    60:  "#b4b4b4",  // Bare / sparse vegetation
+    70:  "#f0f0f0",  // Snow and ice
+    80:  "#0032c8",  // Permanent water bodies
+    90:  "#0096a0",  // Herbaceous wetland
+    95:  "#00cf75",  // Mangroves
+    100: "#fae6a0",  // Moss and lichen
+    // Closed forest sub-classes (111-116) → dark green family
+    111: "#003200", 112: "#005000", 113: "#006e00",
+    114: "#005000", 115: "#003c00", 116: "#003200",
+    // Open forest sub-classes (121-126) → medium green family
+    121: "#72d882", 122: "#54af72", 123: "#72d882",
+    124: "#54af72", 125: "#63bf72", 126: "#5aad72",
+    200: "#003eb2",  // Ocean / Sea
   };
 
   // ── Layer registry ──────────────────────────────────────────
   const DEFS = {
 
-    // ▸ Rasters ─────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────
+    //  CONTINUOUS raster — Population Density (people / km²)
+    //  Colour ramp: YlOrRd  (light yellow → orange → dark red)
+    //  A pixel value of e.g. 347.2 is interpolated along the
+    //  ramp between the raster's actual min/max.
+    // ─────────────────────────────────────────────────────────
     popdens: {
       label: "Population Density", emoji: "👥", group: "raster",
       file: "data/population_density.tif", type: "raster",
-      // YlOrRd (ColorBrewer): light yellow → orange → dark red
       colorFn(v, info) {
         if (v == null || Number.isNaN(v) || v === info.noDataValue || v < 0) return null;
         const lo = Math.max(info.min, 0);
         const t  = Math.min((v - lo) / ((info.max - lo) + 1e-6), 1);
-        // 3-stop: yellow (t=0) → orange (t=0.5) → dark red (t=1)
-        const r = Math.round(255);
-        const g = Math.round(255 * Math.pow(1 - t, 1.2));
-        const b = 0;
+        // YlOrRd 3-stop: yellow → orange → dark crimson
         if (t < 0.5) {
-          // Yellow → Orange
-          return `rgba(255,${Math.round(255 - 165 * (t * 2))},0,0.75)`;
+          const s = t * 2;                               // 0→1 in first half
+          return `rgba(255,${Math.round(255 - 127 * s)},0,0.78)`;  // #ffff00 → #ff8000
         } else {
-          // Orange → Dark Red
-          const s = (t - 0.5) * 2;
-          return `rgba(${Math.round(255 - 60 * s)},${Math.round(90 - 90 * s)},0,0.78)`;
+          const s = (t - 0.5) * 2;                      // 0→1 in second half
+          return `rgba(${Math.round(255 - 60 * s)},${Math.round(128 - 128 * s)},0,0.82)`; // #ff8000 → #c30000
         }
       },
-      // Continuous gradient legend (people/km²)
       gradientLegend: {
-        stops: ["rgba(255,255,0,.90)", "rgba(255,90,0,.90)", "rgba(195,0,0,.90)"],
+        stops: ["rgba(255,255,0,.90)", "rgba(255,128,0,.90)", "rgba(195,0,0,.90)"],
         min: "Low", max: "High", unit: "people / km²",
       },
     },
+
+    // ─────────────────────────────────────────────────────────
+    //  DISCRETE raster — Land Cover CGLS-LC100
+    //  Each pixel holds an integer class code.
+    //  Only Math.round() is used — NO gradient, NO ramp.
+    //  Colours come directly from the official Copernicus table.
+    // ─────────────────────────────────────────────────────────
     landcover: {
       label: "Land Cover", emoji: "🌿", group: "raster",
       file: "data/landcover.tif", type: "raster",
       colorFn(v, info) {
         if (v == null || Number.isNaN(v) || v === info.noDataValue) return null;
-        // Round to nearest integer — critical for resampled classified rasters
-        // (bilinear interpolation in QGIS turns class 50 into e.g. 49.73)
+        // Round to integer: resampling may produce e.g. 49.7 instead of 50
         const cls = Math.round(v);
         if (cls <= 0) return null;
-        // CGLS-LC100 closed forest (111–116) and open forest (121–126)
-        if (cls >= 111 && cls <= 116) return "rgba(34,139,34,.82)";
-        if (cls >= 121 && cls <= 126) return "rgba(100,178,60,.78)";
-        // Direct lookup by class code
-        return LC_PALETTE[cls] || null;
+        const hex = CGLS_COLORS[cls];
+        if (!hex) return null;
+        // Convert hex to rgba with 0.82 opacity
+        const r = parseInt(hex.slice(1,3), 16);
+        const g = parseInt(hex.slice(3,5), 16);
+        const b = parseInt(hex.slice(5,7), 16);
+        return `rgba(${r},${g},${b},0.82)`;
       },
+      // Discrete legend — one swatch per class
       legend: [
-        { color: "rgba(120,120,150,.80)",  label: "Built-up" },
-        { color: "rgba(255,250,140,.72)",  label: "Cropland" },
-        { color: "rgba(168,210,80,.70)",   label: "Herbaceous veg." },
-        { color: "rgba(200,160,100,.72)",  label: "Shrubs" },
-        { color: "rgba(34,139,34,.82)",    label: "Closed forest" },
-        { color: "rgba(100,178,60,.78)",   label: "Open forest" },
-        { color: "rgba(30,144,255,.60)",   label: "Water bodies" },
-        { color: "rgba(0,55,180,.55)",     label: "Ocean / Sea" },
+        { color: "#fa0000", label: "Built-up" },
+        { color: "#f096ff", label: "Cropland" },
+        { color: "#ffff4c", label: "Herbaceous veg." },
+        { color: "#ffbb22", label: "Shrubs" },
+        { color: "#003200", label: "Closed forest" },
+        { color: "#72d882", label: "Open forest" },
+        { color: "#0032c8", label: "Water bodies" },
+        { color: "#b4b4b4", label: "Bare / sparse veg." },
+        { color: "#0096a0", label: "Herbaceous wetland" },
+        { color: "#003eb2", label: "Ocean / Sea" },
       ],
     },
 
