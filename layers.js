@@ -17,21 +17,21 @@ const ContextLayers = (() => {
     return { color: "#444444", weight: 0.8, opacity: 0.6 };
   }
 
-  // ── Land cover palette — covers both ESA WorldCover (10-100)
-  //    and Copernicus Global Land Cover 100m (CGLS-LC100, 20-200) ──
+  // ── Land cover palette — CGLS-LC100 (20–200) + ESA WorldCover (10–100) ──
+  // Using standard cartographic colors: blue-grey cities, greens for veg, blue for water
   const LC_PALETTE = {
-    10:  "rgba(0,160,0,.70)",      // Tree cover (ESA WC)
-    20:  "rgba(195,155,100,.70)",  // Shrubs / Shrubland
-    30:  "rgba(220,215,60,.65)",   // Herbaceous vegetation / Grassland
-    40:  "rgba(255,165,0,.65)",    // Cropland
-    50:  "rgba(210,50,30,.70)",    // Built-up
-    60:  "rgba(215,195,160,.55)",  // Bare / sparse vegetation
-    70:  "rgba(230,245,255,.55)",  // Snow / Ice
-    80:  "rgba(0,100,205,.55)",    // Permanent water
-    90:  "rgba(0,185,155,.55)",    // Herbaceous wetland
-    95:  "rgba(0,145,105,.55)",    // Mangroves
-    100: "rgba(185,205,165,.50)",  // Moss / lichen
-    200: "rgba(0,70,200,.45)",     // Ocean / Sea (CGLS-LC100)
+    10:  "rgba(34,139,34,.75)",    // Tree cover (ESA WC)
+    20:  "rgba(200,160,100,.72)",  // Shrubs
+    30:  "rgba(168,210,80,.70)",   // Herbaceous veg. / Grassland
+    40:  "rgba(255,250,140,.72)",  // Cropland
+    50:  "rgba(120,120,150,.80)",  // Built-up — blue-grey (urban cartographic)
+    60:  "rgba(205,190,155,.60)",  // Bare / sparse vegetation
+    70:  "rgba(235,250,255,.60)",  // Snow / Ice
+    80:  "rgba(30,144,255,.60)",   // Permanent water
+    90:  "rgba(0,200,160,.60)",    // Herbaceous wetland
+    95:  "rgba(0,150,110,.60)",    // Mangroves
+    100: "rgba(180,210,170,.55)",  // Moss / lichen
+    200: "rgba(0,55,180,.55)",     // Ocean / Sea (CGLS-LC100)
   };
 
   // ── Layer registry ──────────────────────────────────────────
@@ -41,17 +41,27 @@ const ContextLayers = (() => {
     popdens: {
       label: "Population Density", emoji: "👥", group: "raster",
       file: "data/population_density.tif", type: "raster",
+      // YlOrRd (ColorBrewer): light yellow → orange → dark red
       colorFn(v, info) {
         if (v == null || Number.isNaN(v) || v === info.noDataValue || v < 0) return null;
         const lo = Math.max(info.min, 0);
         const t  = Math.min((v - lo) / ((info.max - lo) + 1e-6), 1);
-        const r  = Math.round(255 * t);
-        const g  = Math.round(55  * (1 - t));
-        return `rgba(${r},${g},10,0.72)`;
+        // 3-stop: yellow (t=0) → orange (t=0.5) → dark red (t=1)
+        const r = Math.round(255);
+        const g = Math.round(255 * Math.pow(1 - t, 1.2));
+        const b = 0;
+        if (t < 0.5) {
+          // Yellow → Orange
+          return `rgba(255,${Math.round(255 - 165 * (t * 2))},0,0.75)`;
+        } else {
+          // Orange → Dark Red
+          const s = (t - 0.5) * 2;
+          return `rgba(${Math.round(255 - 60 * s)},${Math.round(90 - 90 * s)},0,0.78)`;
+        }
       },
       // Continuous gradient legend (people/km²)
       gradientLegend: {
-        stops: ["rgba(0,55,10,.85)", "rgba(128,28,10,.85)", "rgba(255,0,10,.85)"],
+        stops: ["rgba(255,255,0,.90)", "rgba(255,90,0,.90)", "rgba(195,0,0,.90)"],
         min: "Low", max: "High", unit: "people / km²",
       },
     },
@@ -60,20 +70,20 @@ const ContextLayers = (() => {
       file: "data/landcover.tif", type: "raster",
       colorFn(v, info) {
         if (v == null || Number.isNaN(v) || v === 0 || v === info.noDataValue || v < 0) return null;
-        // Handle CGLS-LC100 closed/open forest classes (111-116, 121-126)
-        if (v >= 111 && v <= 116) return "rgba(0,120,0,.75)";
-        if (v >= 121 && v <= 126) return "rgba(60,155,40,.68)";
+        // CGLS-LC100 closed forest (111–116) and open forest (121–126)
+        if (v >= 111 && v <= 116) return "rgba(34,139,34,.80)";
+        if (v >= 121 && v <= 126) return "rgba(100,178,60,.75)";
         return LC_PALETTE[v] || LC_PALETTE[Math.round(v / 10) * 10] || null;
       },
       legend: [
-        { color: "rgba(210,50,30,.70)",   label: "Built-up" },
-        { color: "rgba(255,165,0,.65)",   label: "Cropland" },
-        { color: "rgba(195,155,100,.70)", label: "Shrubs" },
-        { color: "rgba(220,215,60,.65)",  label: "Herbaceous veg." },
-        { color: "rgba(0,120,0,.75)",     label: "Closed forest" },
-        { color: "rgba(60,155,40,.68)",   label: "Open forest" },
-        { color: "rgba(0,100,205,.55)",   label: "Water bodies" },
-        { color: "rgba(0,70,200,.45)",    label: "Ocean / Sea" },
+        { color: "rgba(120,120,150,.80)",  label: "Built-up" },
+        { color: "rgba(255,250,140,.72)",  label: "Cropland" },
+        { color: "rgba(168,210,80,.70)",   label: "Herbaceous veg." },
+        { color: "rgba(200,160,100,.72)",  label: "Shrubs" },
+        { color: "rgba(34,139,34,.80)",    label: "Closed forest" },
+        { color: "rgba(100,178,60,.75)",   label: "Open forest" },
+        { color: "rgba(30,144,255,.60)",   label: "Water bodies" },
+        { color: "rgba(0,55,180,.55)",     label: "Ocean / Sea" },
       ],
     },
 
@@ -232,7 +242,9 @@ const ContextLayers = (() => {
       max:   (Number.isFinite(rawMax) && rawMax !== nd) ? rawMax : 1,
     };
     info.range = info.max - info.min;
-    console.info(`[ContextLayers] "${key}" raster — noData:${nd}, min:${info.min}, max:${info.max}`);
+    // Diagnostic: sample a few pixel values to help verify correct dataset
+    const sampleVals = (raster.values[0] || []).flat().filter(x => x != null && x !== nd).slice(0, 8);
+    console.info(`[ContextLayers] “${key}” — noData:${nd}, min:${info.min.toFixed(1)}, max:${info.max.toFixed(1)}, sample values:`, sampleVals);
     return new GeoRasterLayer({
       georaster:            raster,
       opacity:              0.75,
