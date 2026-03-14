@@ -17,19 +17,21 @@ const ContextLayers = (() => {
     return { color: "#444444", weight: 0.8, opacity: 0.6 };
   }
 
-  // ── ESA WorldCover palette (class code → rgba) ─────────────
+  // ── Land cover palette — covers both ESA WorldCover (10-100)
+  //    and Copernicus Global Land Cover 100m (CGLS-LC100, 20-200) ──
   const LC_PALETTE = {
-    10:  "rgba(0,160,0,.65)",      // Tree cover
-    20:  "rgba(80,200,80,.60)",    // Shrubland
-    30:  "rgba(210,200,120,.60)",  // Grassland
-    40:  "rgba(255,210,90,.60)",   // Cropland
-    50:  "rgba(190,185,175,.65)",  // Built-up
-    60:  "rgba(210,185,155,.55)",  // Bare / sparse vegetation
+    10:  "rgba(0,160,0,.70)",      // Tree cover (ESA WC)
+    20:  "rgba(195,155,100,.70)",  // Shrubs / Shrubland
+    30:  "rgba(220,215,60,.65)",   // Herbaceous vegetation / Grassland
+    40:  "rgba(255,165,0,.65)",    // Cropland
+    50:  "rgba(210,50,30,.70)",    // Built-up
+    60:  "rgba(215,195,160,.55)",  // Bare / sparse vegetation
     70:  "rgba(230,245,255,.55)",  // Snow / Ice
-    80:  "rgba(0,110,255,.45)",    // Permanent water
-    90:  "rgba(0,195,170,.50)",    // Herbaceous wetland
-    95:  "rgba(0,150,110,.50)",    // Mangroves
-    100: "rgba(200,210,185,.50)",  // Moss / lichen
+    80:  "rgba(0,100,205,.55)",    // Permanent water
+    90:  "rgba(0,185,155,.55)",    // Herbaceous wetland
+    95:  "rgba(0,145,105,.55)",    // Mangroves
+    100: "rgba(185,205,165,.50)",  // Moss / lichen
+    200: "rgba(0,70,200,.45)",     // Ocean / Sea (CGLS-LC100)
   };
 
   // ── Layer registry ──────────────────────────────────────────
@@ -40,34 +42,38 @@ const ContextLayers = (() => {
       label: "Population Density", emoji: "👥", group: "raster",
       file: "data/population_density.tif", type: "raster",
       colorFn(v, info) {
-        if (v <= 0 || v === info.noDataValue) return null;
-        const t = Math.min((v - info.min) / (info.range + 1e-6), 1);
-        const r = Math.round(255 * t);
-        const g = Math.round(60  * (1 - t));
-        return `rgba(${r},${g},10,0.65)`;
+        if (v == null || Number.isNaN(v) || v === info.noDataValue || v < 0) return null;
+        const lo = Math.max(info.min, 0);
+        const t  = Math.min((v - lo) / ((info.max - lo) + 1e-6), 1);
+        const r  = Math.round(255 * t);
+        const g  = Math.round(55  * (1 - t));
+        return `rgba(${r},${g},10,0.72)`;
       },
-      legend: [
-        { color: "rgba(0,60,10,.65)",    label: "Very Low" },
-        { color: "rgba(64,45,10,.65)",   label: "Low" },
-        { color: "rgba(128,30,10,.65)",  label: "Moderate" },
-        { color: "rgba(191,15,10,.65)",  label: "High" },
-        { color: "rgba(255,0,10,.65)",   label: "Very High" },
-      ],
+      // Continuous gradient legend (people/km²)
+      gradientLegend: {
+        stops: ["rgba(0,55,10,.85)", "rgba(128,28,10,.85)", "rgba(255,0,10,.85)"],
+        min: "Low", max: "High", unit: "people / km²",
+      },
     },
     landcover: {
       label: "Land Cover", emoji: "🌿", group: "raster",
       file: "data/landcover.tif", type: "raster",
-      colorFn(v) {
-        return LC_PALETTE[v] || LC_PALETTE[Math.round(v / 10) * 10] || "rgba(100,100,100,.2)";
+      colorFn(v, info) {
+        if (v == null || Number.isNaN(v) || v === 0 || v === info.noDataValue || v < 0) return null;
+        // Handle CGLS-LC100 closed/open forest classes (111-116, 121-126)
+        if (v >= 111 && v <= 116) return "rgba(0,120,0,.75)";
+        if (v >= 121 && v <= 126) return "rgba(60,155,40,.68)";
+        return LC_PALETTE[v] || LC_PALETTE[Math.round(v / 10) * 10] || null;
       },
       legend: [
-        { color: "rgba(0,160,0,.65)",     label: "Tree Cover" },
-        { color: "rgba(80,200,80,.60)",   label: "Shrubland" },
-        { color: "rgba(210,200,120,.60)", label: "Grassland" },
-        { color: "rgba(255,210,90,.60)",  label: "Cropland" },
-        { color: "rgba(190,185,175,.65)", label: "Built-up" },
-        { color: "rgba(0,110,255,.45)",   label: "Water" },
-        { color: "rgba(0,195,170,.50)",   label: "Wetland" },
+        { color: "rgba(210,50,30,.70)",   label: "Built-up" },
+        { color: "rgba(255,165,0,.65)",   label: "Cropland" },
+        { color: "rgba(195,155,100,.70)", label: "Shrubs" },
+        { color: "rgba(220,215,60,.65)",  label: "Herbaceous veg." },
+        { color: "rgba(0,120,0,.75)",     label: "Closed forest" },
+        { color: "rgba(60,155,40,.68)",   label: "Open forest" },
+        { color: "rgba(0,100,205,.55)",   label: "Water bodies" },
+        { color: "rgba(0,70,200,.45)",    label: "Ocean / Sea" },
       ],
     },
 
@@ -152,6 +158,12 @@ const ContextLayers = (() => {
 
   function init(leafletMap) {
     _map = leafletMap;
+    // Create a dedicated pane for rasters — sits between basemap (200) and vector overlays (400)
+    if (!_map.getPane('rasterPane')) {
+      const p = _map.createPane('rasterPane');
+      p.style.zIndex = 250;
+      p.style.pointerEvents = 'none';
+    }
     Object.keys(DEFS).forEach(k => {
       _st[k] = { active: false, loaded: false, empty: false, layer: null };
     });
@@ -210,17 +222,23 @@ const ContextLayers = (() => {
       return L.layerGroup();
     }
     const raster = await parseGeoraster(buffer);
+    // Guard: if georaster included NoData in min/max, use only finite valid range
+    const rawMin = raster.mins[0];
+    const rawMax = raster.maxs[0];
+    const nd     = raster.noDataValue;
     const info   = {
-      noDataValue: raster.noDataValue,
-      min:   raster.mins[0],
-      max:   raster.maxs[0],
-      range: raster.maxs[0] - raster.mins[0],
+      noDataValue: nd,
+      min:   (Number.isFinite(rawMin) && rawMin !== nd) ? rawMin : 0,
+      max:   (Number.isFinite(rawMax) && rawMax !== nd) ? rawMax : 1,
     };
+    info.range = info.max - info.min;
+    console.info(`[ContextLayers] "${key}" raster — noData:${nd}, min:${info.min}, max:${info.max}`);
     return new GeoRasterLayer({
       georaster:            raster,
-      opacity:              0.72,
+      opacity:              0.75,
       pixelValuesToColorFn: ([v]) => def.colorFn(v, info),
-      resolution:           128,
+      resolution:           256,
+      pane:                 'rasterPane',
     });
   }
 
@@ -274,8 +292,6 @@ const ContextLayers = (() => {
 
     if (st.active) {
       st.layer.addTo(_map);
-      // Push rasters behind vector layers
-      if (def.type === "raster") st.layer.bringToBack?.();
     }
     _updateBadge(key);
     if (def.type === "raster") _updateRasterLegend();
@@ -312,12 +328,19 @@ const ContextLayers = (() => {
     let html = "";
     active.forEach(k => {
       const def = DEFS[k];
-      if (!def.legend) return;
       html += `<div class="ml-sep"></div><div class="ml-title">${def.emoji} ${def.label}</div>`;
-      html += def.legend
-        .map(({color, label}) =>
-          `<div class="ml-row"><div class="ml-dot" style="background:${color}"></div><span>${label}</span></div>`
-        ).join("");
+      if (def.gradientLegend) {
+        const g    = def.gradientLegend;
+        const grad = g.stops.join(", ");
+        html += `<div class="ml-grad" style="background:linear-gradient(to right,${grad})"></div>`;
+        html += `<div class="ml-grad-labels"><span>${g.min}</span><span>${g.max}</span></div>`;
+        html += `<div class="ml-grad-unit">${g.unit}</div>`;
+      } else if (def.legend) {
+        html += def.legend
+          .map(({color, label}) =>
+            `<div class="ml-row"><div class="ml-dot" style="background:${color}"></div><span>${label}</span></div>`
+          ).join("");
+      }
     });
     el.innerHTML = html;
   }
